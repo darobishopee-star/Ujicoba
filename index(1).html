@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=720">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>STOCK GUDANG</title>
+
+  <style>
+
+    body {
+      font-family: Arial, Sans-Serif;
+      background: #f2f2f2;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 600px;
+      margin: auto;
+      background: white;
+      padding: 20px;
+      border-radius: 15px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+
+    h2 {
+      text-align: center;
+    }
+
+    input {
+      width: 100%;
+      padding: 12px;
+      margin-top: 10px;
+      box-sizing: border-box;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+    }
+
+    button {
+      width: 100%;
+      padding: 12px;
+      margin-top: 15px;
+      border: none;
+      border-radius: 8px;
+      background: black;
+      color: white;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    table {
+      width: 100%;
+      margin-top: 20px;
+      border-collapse: collapse;
+    }
+    select {
+      width: 100%;
+      padding: 12px;
+      margin-top: 10px;
+      box-sizing: border-box;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+    }
+
+    th, td {
+      border: 1px solid #ddd;
+      padding: 10px;
+      text-align: center;
+    }
+
+    th {
+      background: #eee;
+    }
+
+    .hapus {
+      background: red;
+      color: white;
+      padding: 5px 20px;
+      border-radius: 5px;
+      cursor: pointer;
+      border: none;
+      margin-top: 5px;
+    }
+
+    .edit {
+      background: orange;
+      color: white;
+      padding: 5px 10px;
+      border-radius: 5px;
+      cursor: pointer;
+      border: none;
+      margin-top: 5px;
+    }
+
+  </style>
+</head>
+<body>
+
+  <div class="container">
+
+    <h2 id="judulHalaman">Stock Gudang</h2>
+    
+    
+    <input
+      type="text"
+      id="search"
+      placeholder="Cari Barang..."
+      onkeyup="caribarang()"
+      >
+    
+    <div id="adminArea">
+    <input
+      type="text"
+      id="namabarang"
+      placeholder="Nama barang"
+    >
+
+    <input
+      type="number"
+      id="jumlahbarang"
+      placeholder="Jumlah barang"
+    >
+    <select id="satuan">
+      <option value="">pilih satuan</option>
+      <option value="dus">DUS</option>
+      <option value="pcs">PCS</option>
+      <option value="rtg">RTG</option>
+    </select>
+
+    <button id="btnTambah"
+    onclick="tambahbarang()">
+      Tambah Barang
+    </button>
+   </div>
+    <button id="btnSampah"
+    onclick="lihatSampah()">Lihat Sampah</button>
+    <button onclick="loadData()">Kembali Ke Data</button>
+
+
+    <table>
+      <thead>
+        <tr>
+          <th>Barang</th>
+          <th>Jumlah</th>
+          <th>Satuan</th>
+          <th>Terakhir Diubah</th>
+          <th>Aksi</th>
+        </tr>
+      </thead>
+
+      <tbody id="dataStock"></tbody>
+    </table>
+
+  </div>
+
+  <script type="module">
+
+    import { createClient }
+    from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
+
+    // GANTI DENGAN DATA SUPABASE KAMU
+    const supabaseUrl = 'https://sicvljojspkgnvzdzfsa.supabase.co'
+    const supabaseKey = 'sb_publishable_tzwX2QC5Z6HXgZiKfu_zhA_yH7HpHfF'
+
+    const supabase = createClient(
+      supabaseUrl,
+      supabaseKey
+    )
+    
+    async function cekRole() {
+
+    const { data: userData } =
+      await supabase.auth.getUser()
+
+    if (!userData.user) {
+      return
+     }
+
+    const { data: profile } =
+      await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", userData.user.id)
+    .single()
+
+    roleUser = profile.role
+
+  // sembunyikan tombol admin kalau bukan admin
+      if (roleUser !== "admin") {
+
+        document.getElementById("adminArea").style.display = "none"
+
+        document.getElementById("btnSampah").style.display = "none"
+      }
+    }
+    let stock = []
+    let hasilcari = []
+    let halamanSekarang = "data"
+    let roleUser = "user"
+    cekRole()
+    
+
+    
+
+    // LOAD DATA AWAL
+    window.loadData = async function loadData() {
+      
+      halamanSekarang="data"
+      
+      
+      document.getElementById("judulHalaman").innerText = "Stock Gudang"
+
+      const { data, error } =
+      await supabase
+      .from('stock')
+      .select('*')
+      .eq(`deleted`,false)
+      .order('id', { ascending: true })
+
+      if(error){
+        console.log(error)
+        return
+      }
+
+      stock = data
+      hasilcari = data
+      tampilkanData()
+    }
+
+    loadData()
+    
+    window.lihatSampah = async function() {
+      
+      halamanSekarang="sampah"
+      
+      document.getElementById("judulHalaman").innerText = "Halaman Sampah"
+      
+      const {data,error} =
+      await supabase
+      .from(`stock`)
+      .select(`*`)
+      .eq(`deleted`, true)
+      .order(`id`, {ascending: true})
+      
+      if (error) {
+        console.log (error)
+        return
+      }
+      
+      stock = data
+      hasilcari = data
+      tampilkanSampah()
+    }
+
+    // TAMBAH BARANG
+    window.tambahbarang = async function () {
+
+      let nama =
+      document.getElementById("namabarang").value
+
+      let jumlah =
+      document.getElementById("jumlahbarang").value
+      
+      let satuan =
+      document.getElementById("satuan").value
+
+      if(nama === "" || jumlah === "" || satuan ==="") {
+        alert("Isi semua data!")
+        return
+      }
+
+      const { error } =
+      await supabase
+      .from('stock')
+      .insert([
+        {
+          nama: nama,
+          jumlah: jumlah,
+          satuan: satuan,
+          deleted: false,
+          updated_at: new
+        Date().toLocaleString("id-ID")
+        }
+      ])
+
+      if(error){
+        console.log(error)
+        alert(error.message)
+        return
+      }
+
+      document.getElementById("namabarang").value = ""
+      document.getElementById("jumlahbarang").value = ""
+
+      loadData()
+    }
+
+    // TAMPILKAN DATA
+    function tampilkanData() {
+
+      let tabel =
+      document.getElementById("dataStock")
+
+      tabel.innerHTML = ""
+
+      hasilcari.forEach((item) => {
+
+        tabel.innerHTML += `
+          <tr>
+
+            <td>${item.nama}</td>
+
+            <td>${item.jumlah}</td>
+            
+            <td>${item.satuan}</td>
+            
+            <td>${item.updated_at}</td>
+
+          <td>
+
+            ${
+              roleUser === "admin"
+             ? `
+            <button
+              class="edit"
+              onclick="editBarang(${item.id})">Edit
+            </button>
+
+            <button
+              class="hapus"
+              onclick="hapusBarang(${item.id})">Hapus
+              </button>
+           ` : "-"
+           }
+            </td>
+
+          </tr>
+        `
+      })
+    }
+    
+    function tampilkanSampah() {
+      
+      let tabel =
+      document.getElementById("dataStock")
+      
+      tabel.innerHTML = ""
+      hasilcari.forEach((item) =>{
+        
+        tabel.innerHTML += `
+        <tr>
+          
+          <td>${item.nama}</td>
+          <td>${item.jumlah}</td>
+          <td>${item.satuan}</td>
+          <td>${item.updated_at}</td>
+          
+         <td>
+        ${
+          roleUser === "admin"
+          ? `
+        <button
+          class="edit"
+          onclick="pulihkanBarang(${item.id})">
+          Pulihkan
+        </button>
+
+        <button
+          class="hapus"
+          onclick="hapusPermanen(${item.id})">
+          Hapus Permanen
+         </button>
+      ` : "-"
+        }
+          </td>
+         </tr>
+        `
+      })
+    }
+    
+    window.caribarang =function() {
+        let keyword =
+        document.getElementById("search").value
+        .toLowerCase()
+        
+        hasilcari = stock.filter((item)=>{
+          return (
+            item.nama.toLowerCase().includes(keyword) || item.satuan.toLowerCase().includes(keyword)
+            )
+        })
+        if (halamanSekarang === "sampah"){
+          tampilkanSampah()
+        }else {
+        tampilkanData()
+        }
+      }
+
+    // HAPUS DATA
+    window.hapusBarang = async function(id) {
+
+      const { error } =
+      await supabase
+      .from('stock')
+      .update({
+        deleted: true,
+        deleted_at: new Date().toISOString()
+      })
+      .eq('id', id)
+
+      if(error){
+        console.log(error)
+        return
+      }
+
+      loadData()
+    }
+
+    // EDIT DATA
+    window.editBarang = async function(id) {
+
+      let item =
+      stock.find(data => data.id === id)
+
+      let namaBaru = prompt(
+        "Edit Nama Barang:",
+        item.nama
+      )
+
+      let jumlahBaru = prompt(
+        "Edit Jumlah Barang:",
+        item.jumlah
+      )
+      
+      let satuanBaru = prompt(
+        "Edit satuan Barang:",
+        item.satuan
+        )
+
+      if(namaBaru === null || jumlahBaru === null || satuanBaru === null){
+        return
+      }
+
+      const { error } =
+      await supabase
+      .from('stock')
+      .update({
+        nama: namaBaru,
+        jumlah: jumlahBaru,
+        satuan: satuanBaru,
+        updated_at: new
+        Date().toLocaleString("id-ID")
+      })
+      .eq('id', id)
+
+      if(error){
+        console.log(error)
+        return
+      }
+
+      loadData()
+    }
+    
+    window.pulihkanBarang = async function (id) {
+      
+      const {error} =
+      await supabase
+      .from(`stock`)
+      .update({
+        deleted: false,
+        deleted_at: null
+      })
+      .eq(`id`, id)
+      
+      if(error){
+        console.log(error)
+        return
+      }
+      lihatSampah()
+    }
+    window.hapusPermanen = async function(id) {
+      let yakin = confirm(
+        "data akan dihapus permanen")
+    if (!yakin){
+      return
+    }
+    
+    const {error} =
+    await supabase
+    .from(`stock`)
+    .delete()
+    .eq(`id`, id)
+    
+    if (error){
+      console.log(error)
+      alert("Gagal Hapus Permanen")
+      return
+    }
+    lihatSampah()
+    }
+    
+
+  </script>
+
+</body>
+</html>
