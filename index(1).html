@@ -197,11 +197,15 @@
     let hasilcari = []
     let halamanSekarang = "data"
     let roleUser = "user"
-    cekRole()
+    (async function init(){
+      await cekRole()
+      await loadData()
+    })()
     
-
+    window.loadData = async function loadData() { ... }
+    window.lihatSampah = async function() { ... }
+    window.tambahbarang = async function() { ... }
     
-
     // LOAD DATA AWAL
     window.loadData = async function loadData() {
       
@@ -278,8 +282,7 @@
           jumlah: jumlah,
           satuan: satuan,
           deleted: false,
-          updated_at: new
-        Date().toLocaleString("id-ID")
+          updated_at: new Date().toLocaleString("id-ID")
         }
       ])
 
