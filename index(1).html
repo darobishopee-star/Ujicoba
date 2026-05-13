@@ -22,6 +22,9 @@
       border-radius: 15px;
       box-shadow: 0 0 10px rgba(0,0,0,0.1);
     }
+    #app {
+      display: none;
+     }
 
     h2 {
       text-align: center;
@@ -95,8 +98,38 @@
   </style>
 </head>
 <body>
+  
+  <div id="loginBox" class="container" style="margin-bottom:20px;">
 
-  <div class="container">
+  <h2>Login User</h2>
+
+  <input
+    type="email"
+    id="email"
+    placeholder="Email"
+  >
+
+  <input
+    type="password"
+    id="password"
+    placeholder="Password"
+  >
+
+  <button onclick="loginUser()">
+    Login
+  </button>
+
+  <button onclick="registerUser()">
+    Register
+  </button>
+
+  <button onclick="logoutUser()">
+    Logout
+  </button>
+
+</div>
+
+  <div class="container" id="app">
 
     <h2 id="judulHalaman">Stock Gudang</h2>
     
@@ -154,6 +187,88 @@
   </div>
 
   <script type="module">
+    
+    // REGISTER
+    window.registerUser = async function () {
+
+      let email =
+        document.getElementById("email").value
+
+      let password =
+        document.getElementById("password").value
+
+      if(email === "" || password === ""){
+      alert("Isi email dan password!")
+    return
+    }
+
+    const { data, error } =
+      await supabase.auth.signUp({
+        email: email,
+        password: password
+    })
+
+      if(error){
+    alert(error.message)
+    return
+  }
+
+  // otomatis buat role user
+  if(data.user){
+
+    await supabase
+    .from("profiles")
+    .insert([
+      {
+        id: data.user.id,
+        role: "user"
+      }
+    ])
+  }
+
+  alert("Register berhasil!")
+}
+
+
+// LOGIN
+    window.loginUser = async function () {
+
+  let email =
+    document.getElementById("email").value
+
+  let password =
+    document.getElementById("password").value
+
+  const { error } =
+    await supabase.auth.signInWithPassword({
+      email: email,
+      password: password
+    })
+
+  if(error){
+    alert(error.message)
+    return
+  }
+
+  alert("Login berhasil!")
+
+  document.getElementById("loginBox").style.display = "none"
+document.getElementById("app").style.display = "block"
+
+await cekRole()
+await loadData()
+}
+
+
+// LOGOUT
+    window.logoutUser = async function () {
+
+  await supabase.auth.signOut()
+
+  alert("Logout berhasil")
+
+  location.reload()
+}
 
     import { createClient }
     from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
@@ -166,6 +281,30 @@
       supabaseUrl,
       supabaseKey
     )
+    
+    // CEK LOGIN
+    async function cekLogin() {
+
+      const { data } =
+      await supabase.auth.getSession()
+
+    if(data.session){
+
+    // tampilkan aplikasi
+    document.getElementById("app").style.display = "block"
+
+    // sembunyikan login
+    document.getElementById("loginBox").style.display = "none"
+
+    } else {
+
+    // sembunyikan aplikasi
+      document.getElementById("app").style.display = "none"
+
+    // tampilkan login
+      document.getElementById("loginBox").style.display = "block"
+  }
+}
     
     async function cekRole() {
 
@@ -198,9 +337,18 @@
     let halamanSekarang = "data"
     let roleUser = "user"
     (async function init(){
+
+    await cekLogin()
+
+    const { data } =
+      await supabase.auth.getSession()
+
+    if(data.session){
       await cekRole()
       await loadData()
-    })()
+    }
+
+  })()
     
     window.loadData = async function loadData() { ... }
     window.lihatSampah = async function() { ... }
@@ -231,7 +379,7 @@
       tampilkanData()
     }
 
-    loadData()
+    
     
     window.lihatSampah = async function() {
       
